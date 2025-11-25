@@ -10,10 +10,33 @@
 		27D929842ED35E42004ACF9F /* StationLink.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StationLink.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		27B414BE2ED7370B00EEF795 /* Exceptions for "Images" folder in "StationLink" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				About.png,
+				Friends.png,
+				"Game Detail.png",
+				Games.png,
+				"PS User.png",
+				Settings.png,
+			);
+			target = 27D929832ED35E42004ACF9F /* StationLink */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		27D929862ED35E42004ACF9F /* StationLink */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = StationLink;
+			sourceTree = "<group>";
+		};
+		27FDE6C52ED732D8004BEDC8 /* Images */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				27B414BE2ED7370B00EEF795 /* Exceptions for "Images" folder in "StationLink" target */,
+			);
+			path = Images;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +55,7 @@
 		27D9297B2ED35E42004ACF9F = {
 			isa = PBXGroup;
 			children = (
+				27FDE6C52ED732D8004BEDC8 /* Images */,
 				27D929862ED35E42004ACF9F /* StationLink */,
 				27D929852ED35E42004ACF9F /* Products */,
 			);
@@ -62,6 +86,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				27D929862ED35E42004ACF9F /* StationLink */,
+				27FDE6C52ED732D8004BEDC8 /* Images */,
 			);
 			name = StationLink;
 			packageProductDependencies = (

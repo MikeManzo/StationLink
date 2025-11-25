@@ -20,6 +20,7 @@ struct ContentView: View {
                 Text("Me").tag(0)
                 Text("Games").tag(1)
                 Text("Friends (\(psService.friends.count))").tag(2)
+                Text("About").tag(3)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 12)
@@ -28,7 +29,7 @@ struct ContentView: View {
             Divider()
             
             // Content
-            if psService.isLoading && psService.user == nil {
+            if psService.isLoading && psService.user == nil && selectedTab != 3 {
                 ProgressView()
                     .padding()
                     .frame(width: 350)
@@ -44,8 +45,11 @@ struct ContentView: View {
                 } else if selectedTab == 1 {
                     GamesListView(psService: psService)
                         .frame(width: 350)
-                } else {
+                } else if selectedTab == 2 {
                     FriendsListView(psService: psService)
+                        .frame(width: 350)
+                } else {
+                    AboutTabView()
                         .frame(width: 350)
                 }
             }

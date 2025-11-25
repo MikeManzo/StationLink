@@ -16,6 +16,11 @@
 			path = StationLink;
 			sourceTree = "<group>";
 		};
+		27FDE6C52ED732D8004BEDC8 /* Images */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Images;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,6 +37,7 @@
 		27D9297B2ED35E42004ACF9F = {
 			isa = PBXGroup;
 			children = (
+				27FDE6C52ED732D8004BEDC8 /* Images */,
 				27D929862ED35E42004ACF9F /* StationLink */,
 				27D929852ED35E42004ACF9F /* Products */,
 			);
@@ -62,6 +68,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				27D929862ED35E42004ACF9F /* StationLink */,
+				27FDE6C52ED732D8004BEDC8 /* Images */,
 			);
 			name = StationLink;
 			packageProductDependencies = (

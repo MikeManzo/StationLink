@@ -437,7 +437,7 @@ This software is provided "as is" without warranty of any kind. Use at your own 
 ![Main](<Images/Game Detail.png>)
 
 ### Settings
-*[Add screenshot of Settings dialog]*
+![Main](<Images/Settings.png>)
 
 ---
 

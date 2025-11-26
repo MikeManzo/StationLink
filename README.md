@@ -425,7 +425,7 @@ This software is provided "as is" without warranty of any kind. Use at your own 
 ## 📸 Screenshots
 
 ### Main Interface
-*[Add screenshot of Me tab showing profile]*
+![Main](images\PS/User.png)
 
 ### Games Library
 *[Add screenshot of Games tab with recent games]*

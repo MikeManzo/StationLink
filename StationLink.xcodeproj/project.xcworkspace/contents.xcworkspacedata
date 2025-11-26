@@ -4,4 +4,10 @@
    <FileRef
       location = "self:">
    </FileRef>
+   <FileRef
+      location = "group:IconSet.swift">
+   </FileRef>
+   <FileRef
+      location = "group:AppSettings.swift">
+   </FileRef>
 </Workspace>

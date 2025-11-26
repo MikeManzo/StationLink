@@ -425,16 +425,16 @@ This software is provided "as is" without warranty of any kind. Use at your own 
 ## 📸 Screenshots
 
 ### Main Interface
-![Main](Images/"PS User.png")
+![Main](<Images/PS User.png>)
 
 ### Games Library
-*[Add screenshot of Games tab with recent games]*
+![Ganes](Images/Games.png)
 
 ### Friends List
-*[Add screenshot of Friends tab with online/offline status]*
+![Friends](Images/Friends.png)
 
 ### Game Details
-*[Add screenshot of detailed game view with trophy breakdown]*
+![Main](<Images/Game Detail.png>)
 
 ### Settings
 *[Add screenshot of Settings dialog]*

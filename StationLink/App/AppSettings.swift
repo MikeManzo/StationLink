@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import ServiceManagement
 
 /// Manages app-wide settings and preferences
 @MainActor
@@ -20,6 +21,12 @@ class AppSettings: ObservableObject {
         }
     }
     
+    @Published var launchAtLogin: Bool {
+        didSet {
+            setLoginItemEnabled(launchAtLogin)
+        }
+    }
+    
     private let iconSetKey = "selectedMenubarIcon"
     
     private init() {
@@ -30,6 +37,9 @@ class AppSettings: ObservableObject {
         } else {
             self.selectedIconSet = .playstation
         }
+        
+        // Load login item status
+        self.launchAtLogin = SMAppService.mainApp.status == .enabled
     }
     
     private func saveIconSet() {
@@ -42,5 +52,30 @@ class AppSettings: ObservableObject {
             object: nil,
             userInfo: ["iconSet": selectedIconSet]
         )
+    }
+    
+    // MARK: - Login Item Management
+    
+    /// Enables or disables the app as a login item
+    private func setLoginItemEnabled(_ enabled: Bool) {
+        do {
+            if enabled {
+                if SMAppService.mainApp.status == .enabled {
+                    print("✓ App is already a login item")
+                } else {
+                    try SMAppService.mainApp.register()
+                    print("✓ App registered as login item")
+                }
+            } else {
+                try SMAppService.mainApp.unregister()
+                print("✓ App unregistered as login item")
+            }
+        } catch {
+            print("⚠ Failed to \(enabled ? "register" : "unregister") login item: \(error.localizedDescription)")
+            // Revert the published property to reflect actual state
+            Task { @MainActor in
+                self.launchAtLogin = SMAppService.mainApp.status == .enabled
+            }
+        }
     }
 }

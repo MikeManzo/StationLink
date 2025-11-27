@@ -15,6 +15,12 @@ struct SettingsView: View {
     
     var body: some View {
         TabView {
+            // General Tab
+            generalTab
+                .tabItem {
+                    Label("General", systemImage: "gearshape")
+                }
+            
             // Account Tab
             accountTab
                 .tabItem {
@@ -28,6 +34,38 @@ struct SettingsView: View {
                 }
         }
         .frame(width: 375, height: 450)
+    }
+    
+    // MARK: - General Tab
+    
+    private var generalTab: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("General Settings")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            GroupBox {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle("Launch at Login", isOn: $appSettings.launchAtLogin)
+                    
+                    Text("Automatically start StationLink when you log in to your Mac")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(4)
+            }
+            
+            Spacer()
+            
+            HStack {
+                Spacer()
+                Button("Done") {
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding()
     }
     
     // MARK: - Account Tab

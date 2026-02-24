@@ -17,6 +17,7 @@ class PlayStationService: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
+    private var trophyTitleMap: [String: (npCommunicationId: String, npServiceName: String)] = [:]
     private var npsso: String = ""
     private var accessToken: String?
     private var refreshToken: String?
@@ -369,6 +370,10 @@ class PlayStationService: ObservableObject {
             
             await fetchPresence()
             await refreshAllFriends()
+            
+            // Fetch trophy titles first to get npCommunicationIds
+            trophyTitleMap = await fetchUserTrophyTitles()
+            
             await fetchRecentGames()
             await importPSNFriends()
             
@@ -593,9 +598,37 @@ class PlayStationService: ObservableObject {
                         var earnedTrophies: GameTitle.TrophyCount?
                         var definedTrophies: GameTitle.TrophyCount?
                         var progress: Int?
+                        var npCommunicationId: String?
+                        var npServiceName: String?
+                        
+                        // Debug: Print the entire title object for one game
+                        if name.contains("Battlefield") {
+                            if let titleJSON = try? JSONSerialization.data(withJSONObject: title),
+                               let titleString = String(data: titleJSON, encoding: .utf8) {
+                                print("📊 Full title data for \(name):")
+                                print(titleString)
+                            }
+                        }
                         
                         if let trophyData = title["trophyTitles"] as? [[String: Any]],
                            let firstTrophy = trophyData.first {
+                            
+                            // Debug: Print trophy data structure
+                            if name.contains("Battlefield") {
+                                if let trophyJSON = try? JSONSerialization.data(withJSONObject: firstTrophy),
+                                   let trophyString = String(data: trophyJSON, encoding: .utf8) {
+                                    print("🏆 Trophy data structure:")
+                                    print(trophyString)
+                                }
+                            }
+                            
+                            // Extract npCommunicationId for detailed trophy fetching
+                            npCommunicationId = firstTrophy["npCommunicationId"] as? String
+                            npServiceName = firstTrophy["npServiceName"] as? String
+                            
+                            print("📊 Trophy IDs for \(name):")
+                            print("   npCommunicationId: \(npCommunicationId ?? "nil")")
+                            print("   npServiceName: \(npServiceName ?? "nil")")
                             
                             if let earned = firstTrophy["earnedTrophies"] as? [String: Int] {
                                 earnedTrophies = GameTitle.TrophyCount(
@@ -618,6 +651,13 @@ class PlayStationService: ObservableObject {
                             progress = firstTrophy["progress"] as? Int
                         }
                         
+                        // Try to match game with trophy title map
+                        if npCommunicationId == nil, let trophyInfo = trophyTitleMap[name] {
+                            npCommunicationId = trophyInfo.npCommunicationId
+                            npServiceName = trophyInfo.npServiceName
+                            print("✓ Matched \(name) with trophy data from map")
+                        }
+                        
                         let game = GameTitle(
                             id: titleId,
                             name: name,
@@ -627,7 +667,9 @@ class PlayStationService: ObservableObject {
                             playDuration: playDuration,
                             progress: progress,
                             earnedTrophies: earnedTrophies,
-                            definedTrophies: definedTrophies
+                            definedTrophies: definedTrophies,
+                            npCommunicationId: npCommunicationId,
+                            npServiceName: npServiceName
                         )
                         
                         games.append(game)
@@ -641,6 +683,191 @@ class PlayStationService: ObservableObject {
             }
         } catch {
             print("Error fetching recent games: \(error.localizedDescription)")
+        }
+    }
+    
+    func fetchUserTrophyTitles() async -> [String: (npCommunicationId: String, npServiceName: String)] {
+        guard let token = accessToken,
+              let accountId = user?.accountId else {
+            print("⚠ Missing token or accountId for trophy titles")
+            return [:]
+        }
+        
+        // Fetch user's trophy titles with npCommunicationId
+        guard let url = URL(string: "https://m.np.playstation.com/api/trophy/v1/users/\(accountId)/trophyTitles") else {
+            return [:]
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Trophy Titles Status: \(httpResponse.statusCode)")
+                
+                if httpResponse.statusCode != 200 {
+                    return [:]
+                }
+            }
+            
+            // Parse response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let titles = json["trophyTitles"] as? [[String: Any]] {
+                
+                var trophyMap: [String: (String, String)] = [:]
+                
+                for title in titles {
+                    if let npCommId = title["npCommunicationId"] as? String,
+                       let npServiceName = title["npServiceName"] as? String,
+                       let titleName = title["trophyTitleName"] as? String {
+                        
+                        // Use title name as key to match with game titles
+                        trophyMap[titleName] = (npCommId, npServiceName)
+                        
+                        // Also try to match with titleId if available
+                        if let trophyTitleDetail = title["trophyTitleDetail"] as? String {
+                            trophyMap[trophyTitleDetail] = (npCommId, npServiceName)
+                        }
+                    }
+                }
+                
+                print("✓ Loaded \(trophyMap.count) trophy title mappings")
+                return trophyMap
+            }
+            
+            return [:]
+        } catch {
+            print("Error fetching trophy titles: \(error.localizedDescription)")
+            return [:]
+        }
+    }
+    
+    func fetchTrophiesForGame(game: GameTitle) async -> [Trophy]? {
+        guard let token = accessToken,
+              let accountId = user?.accountId,
+              let npCommId = game.npCommunicationId else {
+            print("⚠ Missing token, accountId, or npCommunicationId for trophy fetch")
+            return nil
+        }
+        
+        // Determine service parameter - default to "trophy" if not specified
+        let serviceParam = game.npServiceName ?? "trophy"
+        
+        // First, fetch trophy definitions (names, descriptions, icons)
+        guard let defUrl = URL(string: "https://m.np.playstation.com/api/trophy/v1/npCommunicationIds/\(npCommId)/trophyGroups/all/trophies?npServiceName=\(serviceParam)") else {
+            print("⚠ Failed to construct trophy definition URL")
+            return nil
+        }
+        
+        var defRequest = URLRequest(url: defUrl)
+        defRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        var trophyDefinitions: [Int: [String: Any]] = [:]
+        
+        do {
+            let (defData, defResponse) = try await URLSession.shared.data(for: defRequest)
+            
+            if let httpResponse = defResponse as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                if let json = try? JSONSerialization.jsonObject(with: defData) as? [String: Any],
+                   let trophiesArray = json["trophies"] as? [[String: Any]] {
+                    for trophy in trophiesArray {
+                        if let trophyId = trophy["trophyId"] as? Int {
+                            trophyDefinitions[trophyId] = trophy
+                        }
+                    }
+                    print("✓ Loaded \(trophyDefinitions.count) trophy definitions")
+                }
+            }
+        } catch {
+            print("⚠ Failed to fetch trophy definitions: \(error.localizedDescription)")
+        }
+        
+        // Now fetch user-specific earned status
+        guard let url = URL(string: "https://m.np.playstation.com/api/trophy/v1/users/\(accountId)/npCommunicationIds/\(npCommId)/trophyGroups/all/trophies?npServiceName=\(serviceParam)") else {
+            print("⚠ Failed to construct trophy URL")
+            return nil
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Trophy Details Status: \(httpResponse.statusCode)")
+                
+                if httpResponse.statusCode != 200 {
+                    if let jsonString = String(data: data, encoding: .utf8) {
+                        print("Trophy Error Response: \(jsonString)")
+                    }
+                    return nil
+                }
+            }
+            
+            // Debug: Print response
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("Trophy Response: \(jsonString.prefix(500))")
+            }
+            
+            // Parse the response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let trophiesArray = json["trophies"] as? [[String: Any]] {
+                
+                var trophies: [Trophy] = []
+                
+                for trophyData in trophiesArray {
+                    guard let trophyId = trophyData["trophyId"] as? Int,
+                          let trophyType = trophyData["trophyType"] as? String else {
+                        continue
+                    }
+                    
+                    // Get definition data if available
+                    let definition = trophyDefinitions[trophyId]
+                    
+                    // Merge data from both sources
+                    let trophyName = definition?["trophyName"] as? String ?? trophyData["trophyName"] as? String ?? "Trophy \(trophyId)"
+                    let trophyDetail = definition?["trophyDetail"] as? String ?? trophyData["trophyDetail"] as? String ?? ""
+                    let trophyIconUrl = definition?["trophyIconUrl"] as? String ?? trophyData["trophyIconUrl"] as? String ?? ""
+                    let trophyGroupId = definition?["trophyGroupId"] as? String ?? trophyData["trophyGroupId"] as? String ?? "default"
+                    
+                    let hidden = trophyData["trophyHidden"] as? Bool ?? false
+                    let earned = trophyData["earned"] as? Bool ?? false
+                    let earnedDateTime = trophyData["earnedDateTime"] as? String
+                    let progressTargetValue = definition?["trophyProgressTargetValue"] as? String ?? trophyData["trophyProgressTargetValue"] as? String
+                    let rewardName = definition?["trophyRewardName"] as? String ?? trophyData["trophyRewardName"] as? String
+                    let rewardImageUrl = definition?["trophyRewardImageUrl"] as? String ?? trophyData["trophyRewardImageUrl"] as? String
+                    
+                    let trophy = Trophy(
+                        id: trophyId,
+                        trophyType: trophyType,
+                        trophyName: trophyName,
+                        trophyDetail: trophyDetail,
+                        trophyIconUrl: trophyIconUrl,
+                        trophyGroupId: trophyGroupId,
+                        hidden: hidden,
+                        earned: earned,
+                        earnedDateTime: earnedDateTime,
+                        trophyProgressTargetValue: progressTargetValue,
+                        trophyRewardName: rewardName,
+                        trophyRewardImageUrl: rewardImageUrl
+                    )
+                    
+                    trophies.append(trophy)
+                }
+                
+                print("✓ Loaded \(trophies.count) trophies for \(game.name)")
+                return trophies
+            }
+            
+            print("⚠ Failed to parse trophy data")
+            return nil
+            
+        } catch {
+            print("Error fetching trophies: \(error.localizedDescription)")
+            return nil
         }
     }
     

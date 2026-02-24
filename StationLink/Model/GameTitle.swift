@@ -17,6 +17,8 @@ struct GameTitle: Identifiable, Codable {
     let progress: Int?
     let earnedTrophies: TrophyCount?
     let definedTrophies: TrophyCount?
+    let npCommunicationId: String? // Used for fetching detailed trophies
+    let npServiceName: String? // "trophy" for PS3/PS4/Vita, "trophy2" for PS5/PC
     
     struct TrophyCount: Codable {
         let bronze: Int

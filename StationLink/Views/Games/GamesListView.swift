@@ -30,6 +30,7 @@ struct GamesListView: View {
                     VStack(spacing: 0) {
                         ForEach(psService.recentGames) { game in
                             GameRowView(game: game)
+                                .environmentObject(psService)
                             
                             if game.id != psService.recentGames.last?.id {
                                 Divider()

@@ -10,6 +10,9 @@ import SwiftUI
 struct GameDetailView: View {
     let game: GameTitle
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var playStationService: PlayStationService
+    @State private var trophies: [Trophy] = []
+    @State private var isLoadingTrophies = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -111,6 +114,52 @@ struct GameDetailView: View {
                         Divider()
                     }
                     
+                    // Trophy List
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Trophies")
+                                .font(.headline)
+                            
+                            Spacer()
+                            
+                            if isLoadingTrophies {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                            }
+                        }
+                        
+                        if game.npCommunicationId == nil {
+                            Text("Trophy data not available for this game")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding(.vertical, 20)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(8)
+                        } else if trophies.isEmpty && !isLoadingTrophies {
+                            Text("Tap to load trophies")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding(.vertical, 20)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(8)
+                                .onTapGesture {
+                                    Task {
+                                        await loadTrophies()
+                                    }
+                                }
+                        } else if !trophies.isEmpty {
+                            VStack(spacing: 8) {
+                                ForEach(trophies) { trophy in
+                                    TrophyDetailRow(trophy: trophy)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                    
                     // Play time
                     if let playDuration = game.playDuration {
                         VStack(alignment: .leading, spacing: 8) {
@@ -140,8 +189,28 @@ struct GameDetailView: View {
                 .padding()
             }
         }
-        .frame(width: 400)
-        .fixedSize()
+        .frame(width: 400, height: 600)
+        .task {
+            await loadTrophies()
+        }
+    }
+    
+    func loadTrophies() async {
+        guard !isLoadingTrophies else { return }
+        
+        print("🎮 Loading trophies for: \(game.name)")
+        print("   npCommunicationId: \(game.npCommunicationId ?? "nil")")
+        print("   npServiceName: \(game.npServiceName ?? "nil")")
+        
+        isLoadingTrophies = true
+        defer { isLoadingTrophies = false }
+        
+        if let fetchedTrophies = await playStationService.fetchTrophiesForGame(game: game) {
+            trophies = fetchedTrophies
+            print("✓ Loaded \(fetchedTrophies.count) trophies")
+        } else {
+            print("⚠ Failed to load trophies")
+        }
     }
     
     func formatDate(_ dateString: String) -> String {

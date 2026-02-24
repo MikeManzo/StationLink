@@ -10,6 +10,7 @@ import SwiftUI
 struct GameRowView: View {
     let game: GameTitle
     @State private var showingDetail = false
+    @EnvironmentObject var playStationService: PlayStationService
     
     var body: some View {
         Button(action: { showingDetail = true }) {
